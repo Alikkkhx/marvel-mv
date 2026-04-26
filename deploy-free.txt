@@ -1,0 +1,123 @@
+================================================================================
+
+RENDER — ПОШАГОВО (для друзей, бесплатно)
+
+================================================================================
+
+
+
+0) Код в GitHub
+
+   Залей папку проекта (marvel-mv) в публичный/приватный репозиторий.
+
+
+
+1) База Neon (бесплатный Postgres) — https://console.neon.tech
+
+   - Create project → скопируй Connection string (URI), формат postgresql://...
+
+   - В конце иногда добавляют ?sslmode=require — оставь как в Neon.
+
+
+
+2) Аккаунт Render — https://render.com (логин через GitHub).
+
+
+
+3) New → Blueprint (или Web Service, см. ниже).
+
+
+
+   ВАРИАНТ A — Blueprint (файл render.yaml уже в репо):
+
+   - New → Blueprint → выбери репозиторий и ветку (main/master).
+
+   - Render создаст Web Service. Имя сервиса станет URL: ИМЯ.onrender.com
+
+
+
+   Сразу в Environment (переменные) ДОПИШИ (или проверь после создания):
+
+
+
+   DATABASE_URL    = (вся строка из Neon)
+
+   ALLOWED_HOSTS   = ИМЯ.onrender.com
+
+   CSRF_TRUSTED_ORIGINS   = https://ИМЯ.onrender.com
+
+   CORS_ALLOWED_ORIGINS  = https://ИМЯ.onrender.com
+
+
+
+   SECRET_KEY и DEBUG=False уже заложены в render.yaml (SECRET_KEY сгенерится).
+
+
+
+   ВАРИАНТ B — вручную Web Service (без Blueprint):
+
+   - New → Web Service → репозиторий.
+
+   - Build Command:
+
+     pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+
+   - Start Command:
+
+     gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+
+   - Добавь все переменные как в render.yaml + Neon DATABASE_URL + три строки
+
+     ALLOWED_HOSTS / CSRF / CORS (как выше, подставь своё ИМя.onrender.com).
+
+
+
+4) Apply / Deploy. Дождись “Live” (зелёный). Первый запуск после сна = до ~1 мин.
+
+
+
+5) One-off Shell на Render: меню твоего Web Service → Shell, выполни:
+
+     python manage.py seed_mcu
+
+   (загрузит фильмы; один раз, потом по желанию).
+
+
+
+6) Ссылка https://ИМЯ.onrender.com — отдай друзьям. Регистрация/логин — как локально.
+
+
+
+--------------------------------------------------------------------------------
+
+Если build падает на migrate — проверь, что DATABASE_URL в Render добавлен
+
+и строка валидная (копипаста из Neon без лишних пробелов).
+
+--------------------------------------------------------------------------------
+
+Памятка: бесплатный план “засыпает” без трафика; Пароли и секреты — только в Render, не в Git.
+
+================================================================================
+
+
+
+(Ниже — запасной вариант PythonAnywhere, менее актуален, если выбрали Render.)
+
+
+
+--------------------------------------------------------------------------------
+
+PythonAnywhere (альтернатива)
+
+--------------------------------------------------------------------------------
+
+- https://pythonanywhere.com — проще, SQLite, адрес логин.pythonanywhere.com
+
+- Вручную: virtualenv, pip, WSGI на config.wsgi, static из staticfiles, migrate + seed_mcu
+
+
+
+================================================================================
+
+

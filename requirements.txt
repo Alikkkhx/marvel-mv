@@ -1,0 +1,9 @@
+Django>=4.2
+djangorestframework
+django-environ
+django-cors-headers
+gunicorn
+whitenoise
+psycopg2-binary
+Pillow
+python-dotenv

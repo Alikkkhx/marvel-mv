@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}Marvel Movie Tracker Pro{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background-color: #000; color: white; }
+        .glass { background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(15px); }
+        .netflix-card:hover { transform: translateY(-5px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <nav class="flex items-center justify-between px-4 md:px-8 py-4 sticky top-0 z-50 glass">
+        <div class="flex items-center space-x-4 md:space-x-8">
+            <a href="{% url 'home' %}" class="text-red-600 text-xl md:text-3xl font-black tracking-tighter uppercase">Marvel</a>
+            <div class="hidden md:flex space-x-4">
+                <a href="{% url 'home' %}" class="hover:text-gray-300">Home</a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="hover:text-gray-300">Dashboard</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex items-center space-x-3 md:space-x-4">
+            {% if user.is_authenticated %}
+                <span class="hidden sm:inline text-sm text-gray-400">Hi, {{ user.username }}</span>
+                <a href="{% url 'logout' %}" class="bg-red-600 px-3 md:px-4 py-1 rounded text-xs md:sm font-semibold hover:bg-red-700">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="text-xs md:sm font-semibold hover:text-gray-300">Login</a>
+                <a href="{% url 'register' %}" class="bg-red-600 px-3 md:px-4 py-1 rounded text-xs md:sm font-semibold hover:bg-red-700">Join</a>
+            {% endif %}
+            
+            <!-- Mobile Menu Toggle (Simplified) -->
+            <div class="md:hidden">
+                <button onclick="toggleMobileMenu()" class="text-white"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden md:hidden fixed inset-0 z-[60] bg-black/95 p-8 flex flex-col space-y-6 text-xl font-bold">
+        <button onclick="toggleMobileMenu()" class="self-end text-3xl">&times;</button>
+        <a href="{% url 'home' %}" onclick="toggleMobileMenu()">Home</a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}" onclick="toggleMobileMenu()">Dashboard</a>
+        {% endif %}
+    </div>
+
+    <main class="px-4 py-6 sm:px-6 md:p-8 max-w-[100vw] overflow-x-hidden">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="mt-12 md:mt-20 border-t border-gray-800 px-4 py-8 md:p-8 text-center text-gray-500 text-sm">
+        &copy; 2026 Marvel Movie Tracker Pro. Built for Portfolio.
+    </footer>
+
+    <script>
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+            if (!menu.classList.contains('hidden')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // CSRF helper for AJAX
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

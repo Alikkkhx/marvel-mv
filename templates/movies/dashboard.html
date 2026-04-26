@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Marvel Tracker Pro{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-bold mb-10">Your Marvel Journey</h1>
+
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 mb-12">
+        <div class="glass p-6 md:p-8 rounded-2xl border border-white/10 text-center">
+            <p class="text-gray-400 uppercase text-[10px] md:text-xs font-bold tracking-widest mb-2">Total Watched</p>
+            <p class="text-3xl md:text-5xl font-black text-red-600">{{ stats.total_watched }}</p>
+        </div>
+        <div class="glass p-6 md:p-8 rounded-2xl border border-white/10 text-center">
+            <p class="text-gray-400 uppercase text-[10px] md:text-xs font-bold tracking-widest mb-2">Remaining</p>
+            <p class="text-3xl md:text-5xl font-black text-gray-400">{{ stats.total_remaining }}</p>
+        </div>
+        <div class="glass p-6 md:p-8 rounded-2xl border border-white/10 text-center">
+            <p class="text-gray-400 uppercase text-[10px] md:text-xs font-bold tracking-widest mb-2">Overall Progress</p>
+            <p class="text-3xl md:text-5xl font-black text-green-500">{{ stats.progress_pct }}%</p>
+        </div>
+    </div>
+
+    <!-- Recommendations & Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+        <!-- What to Watch Next -->
+        <div>
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <i class="fas fa-play-circle text-red-600 mr-3"></i> What to Watch Next
+            </h2>
+            <div class="space-y-6">
+                {% for item in recommendation_items %}
+                {% with movie=item.movie %}
+                <div class="flex items-center glass p-4 rounded-xl border border-white/5 hover:border-red-600/50 transition-colors">
+                    <img src="{{ movie.poster_url }}" class="w-16 h-24 object-cover rounded shadow-lg mr-4" alt="{{ movie.title }}">
+                    <div>
+                        <h4 class="font-bold text-lg">{{ movie.title }}</h4>
+                        <p class="text-sm text-gray-400">{{ movie.year }} • {{ movie.phase.name }}</p>
+                        <p class="text-xs text-amber-500/90 mt-2 font-medium leading-snug">{{ item.reason }}</p>
+                    </div>
+                </div>
+                {% endwith %}
+                {% empty %}
+                <div class="text-center p-8 glass rounded-xl">
+                    <p class="text-green-500 font-bold">You've watched everything! Excelsior!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Progress Chart -->
+        <div>
+            <h2 class="text-2xl font-bold mb-6">Progress by Phase</h2>
+            <div class="glass p-6 rounded-2xl border border-white/10">
+                <canvas id="phaseChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('phaseChart').getContext('2d');
+    const phaseLabels = [{% for s in stats.phase_stats %}'{{ s.name }}',{% endfor %}];
+    const phaseData = [{% for s in stats.phase_stats %}{{ s.pct }},{% endfor %}];
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: phaseLabels,
+            datasets: [{
+                label: 'Progress (%)',
+                data: phaseData,
+                backgroundColor: 'rgba(220, 38, 38, 0.6)',
+                borderColor: 'rgba(220, 38, 38, 1)',
+                borderWidth: 1,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#fff' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#fff' }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+</script>
+{% endblock %}

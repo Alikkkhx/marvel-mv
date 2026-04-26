@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+
+{% block title %}MCU Tracker | Marvel Cinematic Universe{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-10 space-y-4 md:space-y-0">
+    <div>
+        <h1 class="text-4xl font-black tracking-tighter uppercase">MCU Catalog</h1>
+        <p class="text-gray-500 text-sm">Track your progress through the multiverse</p>
+    </div>
+    
+    <form method="GET" class="flex flex-wrap gap-4 items-center">
+        <select name="phase" onchange="this.form.submit()" class="bg-zinc-900 border border-white/10 text-white text-xs font-bold uppercase rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-600 outline-none">
+            <option value="">All Phases</option>
+            {% for phase in phases %}
+            <option value="{{ phase.id }}" {% if current_phase == phase.id|stringformat:"s" %}selected{% endif %}>{{ phase.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="status" onchange="this.form.submit()" class="bg-zinc-900 border border-white/10 text-white text-xs font-bold uppercase rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-600 outline-none">
+            <option value="">All Status</option>
+            <option value="watched" {% if current_status == 'watched' %}selected{% endif %}>Watched</option>
+            <option value="unwatched" {% if current_status == 'unwatched' %}selected{% endif %}>Unwatched</option>
+        </select>
+
+        <select name="sort" onchange="this.form.submit()" class="bg-zinc-900 border border-white/10 text-white text-xs font-bold uppercase rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-600 outline-none">
+            <option value="year_asc" {% if current_sort == 'year_asc' %}selected{% endif %}>Year ↑</option>
+            <option value="year_desc" {% if current_sort == 'year_desc' %}selected{% endif %}>Year ↓</option>
+            <option value="title_az" {% if current_sort == 'title_az' %}selected{% endif %}>Title A–Z</option>
+            <option value="title_za" {% if current_sort == 'title_za' %}selected{% endif %}>Title Z–A</option>
+        </select>
+    </form>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+    {% for movie in movies %}
+    <div 
+        class="netflix-card relative group rounded-xl overflow-hidden bg-zinc-900 shadow-2xl cursor-pointer aspect-[2/3] border border-white/5" 
+        id="movie-{{ movie.id }}"
+        onclick="openModal({{ movie.id }})"
+    >
+        <img 
+            src="{{ movie.poster_url }}" 
+            alt="{{ movie.title }}" 
+            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onerror="this.onerror=null; this.src='https://placehold.co/500x750/141414/ffffff?text={{ movie.title|urlencode }}';"
+        >
+        
+        <!-- Rating Badge -->
+        <div class="absolute top-3 left-3 bg-yellow-500 text-black font-black text-[10px] px-2 py-0.5 rounded shadow-lg z-10">
+            ★ {{ movie.rating }}
+        </div>
+
+        <!-- Watch Status Badge (always visible: green = watched, muted = not) -->
+        <div
+            id="badge-{{ movie.id }}"
+            class="absolute top-3 right-3 z-10"
+            data-watched="{{ movie.is_watched|yesno:'true,false' }}"
+        >
+            <div class="watch-badge-inner {% if movie.is_watched %}bg-green-500 text-white border border-green-400/40{% else %}bg-zinc-800/90 text-zinc-500 border border-white/15{% endif %} p-1.5 rounded-full shadow-lg">
+                <i class="fas fa-check text-[10px]"></i>
+            </div>
+        </div>
+        {% if user.is_authenticated %}
+        <button
+            type="button"
+            class="absolute top-3 right-12 z-20 bg-black/60 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center border border-white/10"
+            title="Toggle watched"
+            aria-label="Toggle watched"
+            onclick="event.stopPropagation(); toggleWatch({{ movie.id }})"
+        >
+            <i class="fas fa-check text-xs"></i>
+        </button>
+        {% endif %}
+
+        <!-- Overlay -->
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+            <h3 class="text-sm font-black leading-tight">{{ movie.title }}</h3>
+            <p class="text-[10px] text-gray-400 font-medium mb-2">{{ movie.title_ru }}</p>
+            <div class="flex items-center justify-between mt-1">
+                <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{{ movie.year }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Movie Detail Modal -->
+<div id="movieModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
+    <div class="bg-zinc-900 max-w-5xl w-full max-h-[100dvh] overflow-y-auto overscroll-contain rounded-3xl relative border border-white/10 flex flex-col md:flex-row shadow-2xl md:max-h-none md:overflow-hidden">
+        <button onclick="closeModal()" class="absolute top-6 right-6 text-white/50 hover:text-white transition-colors z-20 bg-black/20 w-10 h-10 rounded-full flex items-center justify-center">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+        
+        <!-- Left: Poster -->
+        <div class="w-full md:w-2/5 aspect-[2/3] md:aspect-auto">
+            <img id="modalPoster" src="" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='https://placehold.co/500x750/141414/ffffff?text=Marvel';">
+        </div>
+
+        <!-- Right: Info -->
+        <div class="w-full md:w-3/5 p-8 md:p-12 flex flex-col">
+            <div class="flex items-center space-x-3 mb-4">
+                <span id="modalRating" class="bg-yellow-500 text-black px-2 py-1 rounded font-black text-xs"></span>
+                <span id="modalPhase" class="text-red-600 font-black uppercase tracking-widest text-[10px]"></span>
+            </div>
+            
+            <h2 id="modalTitleEn" class="text-3xl md:text-5xl font-black mb-1 leading-none tracking-tighter"></h2>
+            <h3 id="modalTitleRu" class="text-xl md:text-2xl text-gray-500 font-bold mb-6 tracking-tight"></h3>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-white/10 mb-6">
+                <button onclick="switchTab('ru')" id="tab-ru" class="px-4 py-2 text-sm font-bold border-b-2 border-red-600">Описание (RU)</button>
+                <button onclick="switchTab('en')" id="tab-en" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-white">Overview (EN)</button>
+                <button onclick="switchTab('specs')" id="tab-specs" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-white">Details</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="flex-grow overflow-y-auto max-h-[200px] mb-8 pr-4 custom-scrollbar">
+                <div id="content-ru" class="tab-content text-gray-300 leading-relaxed"></div>
+                <div id="content-en" class="tab-content hidden text-gray-300 leading-relaxed"></div>
+                <div id="content-specs" class="tab-content hidden space-y-4">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="text-gray-500 uppercase font-bold text-[10px] tracking-widest">Release Date</div>
+                        <div id="specDate" class="text-white font-bold"></div>
+                        <div class="text-gray-500 uppercase font-bold text-[10px] tracking-widest">Director</div>
+                        <div id="specDirector" class="text-white font-bold"></div>
+                        <div class="text-gray-500 uppercase font-bold text-[10px] tracking-widest">Universe</div>
+                        <div class="text-white font-bold">Marvel Cinematic Universe (MCU)</div>
+                        <div id="specPhaseTitle" class="text-gray-500 uppercase font-bold text-[10px] tracking-widest">Phase</div>
+                        <div id="specPhase" class="text-white font-bold"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4 mt-auto">
+                {% if user.is_authenticated %}
+                <button id="modalWatchBtn" class="flex-grow bg-white text-black px-8 py-4 rounded-xl font-black uppercase text-sm hover:bg-gray-200 transition-all transform active:scale-95 shadow-xl">
+                    Mark Watched
+                </button>
+                {% else %}
+                <a href="{% url 'login' %}" class="flex-grow bg-red-600 text-center px-8 py-4 rounded-xl font-black uppercase text-sm hover:bg-red-700 transition-all shadow-xl">
+                    Login to Track
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not movies %}
+<div class="text-center py-32">
+    <div class="text-6xl mb-4 text-zinc-800">
+        <i class="fas fa-film"></i>
+    </div>
+    <p class="text-gray-500 text-xl font-bold">The multiverse is empty...</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const modal = document.getElementById('movieModal');
+    let currentMovieId = null;
+
+    async function openModal(movieId) {
+        currentMovieId = movieId;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // Reset tabs
+        switchTab('ru');
+
+        try {
+            const response = await fetch(`/api/movies/?id=${movieId}`, { credentials: 'same-origin' });
+            const movie = await response.json();
+
+            if (movie && !movie.error) {
+                document.getElementById('modalTitleEn').innerText = movie.title;
+                document.getElementById('modalTitleRu').innerText = movie.title_ru;
+                document.getElementById('modalRating').innerText = `★ ${movie.rating}`;
+                document.getElementById('modalPhase').innerText = movie.phase_name;
+                document.getElementById('content-ru').innerText = movie.description_ru || "Описание скоро появится.";
+                document.getElementById('content-en').innerText = movie.description_en || "English description coming soon.";
+                document.getElementById('modalPoster').src = movie.poster_url;
+                
+                document.getElementById('specDate').innerText = movie.release_date;
+                document.getElementById('specDirector').innerText = movie.director;
+                document.getElementById('specPhase').innerText = movie.phase_name;
+
+                const watchBtn = document.getElementById('modalWatchBtn');
+                if (watchBtn) {
+                    watchBtn.innerText = movie.is_watched ? '✓ Watched' : 'Mark Watched';
+                    watchBtn.className = movie.is_watched 
+                        ? "flex-grow bg-green-600 text-white px-8 py-4 rounded-xl font-black uppercase text-sm hover:bg-green-700 transition-all shadow-xl"
+                        : "flex-grow bg-white text-black px-8 py-4 rounded-xl font-black uppercase text-sm hover:bg-gray-200 transition-all shadow-xl";
+                    
+                    watchBtn.onclick = () => { toggleWatch(movie.id); };
+                }
+            }
+        } catch (error) {
+            console.error('API Error:', error);
+        }
+    }
+
+    function switchTab(tabId) {
+        // Hide all
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('[id^="tab-"]').forEach(el => {
+            el.classList.remove('border-red-600', 'text-white');
+            el.classList.add('border-transparent', 'text-gray-500');
+        });
+
+        // Show selected
+        document.getElementById(`content-${tabId}`).classList.remove('hidden');
+        const tabBtn = document.getElementById(`tab-${tabId}`);
+        tabBtn.classList.add('border-red-600', 'text-white');
+        tabBtn.classList.remove('border-transparent', 'text-gray-500');
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    function setWatchBadge(movieId, isWatched) {
+        const badge = document.getElementById(`badge-${movieId}`);
+        if (!badge) return;
+        const inner = badge.querySelector('.watch-badge-inner');
+        if (!inner) return;
+        badge.setAttribute('data-watched', isWatched ? 'true' : 'false');
+        if (isWatched) {
+            inner.className = 'watch-badge-inner bg-green-500 text-white border border-green-400/40 p-1.5 rounded-full shadow-lg';
+        } else {
+            inner.className = 'watch-badge-inner bg-zinc-800/90 text-zinc-500 border border-white/15 p-1.5 rounded-full shadow-lg';
+        }
+    }
+
+    function updateModalWatchButton(isWatched) {
+        const watchBtn = document.getElementById('modalWatchBtn');
+        if (!watchBtn) return;
+        watchBtn.innerText = isWatched ? '✓ Watched' : 'Mark Watched';
+        watchBtn.className = isWatched
+            ? 'flex-grow bg-green-600 text-white px-8 py-4 rounded-xl font-black uppercase text-sm hover:bg-green-700 transition-all shadow-xl'
+            : 'flex-grow bg-white text-black px-8 py-4 rounded-xl font-black uppercase text-sm hover:bg-gray-200 transition-all shadow-xl';
+    }
+
+    async function toggleWatch(movieId) {
+        try {
+            const response = await fetch('/api/toggle-watch/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ movie_id: movieId })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && typeof data.is_watched === 'boolean') {
+                setWatchBadge(movieId, data.is_watched);
+                if (currentMovieId === movieId) {
+                    updateModalWatchButton(data.is_watched);
+                }
+            }
+        } catch (error) {
+            console.error('Toggle Error:', error);
+        }
+    }
+
+</script>
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 10px; }
+</style>
+{% endblock %}
