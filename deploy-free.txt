@@ -60,7 +60,9 @@ RENDER — ПОШАГОВО (для друзей, бесплатно)
 
    - Build Command:
 
-     pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+     pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py seed_mcu
+
+     (сид в build, т.к. на free tier нет Shell. После первой успешной заливки при желании удали "&& ... seed_mcu" из команды.)
 
    - Start Command:
 
@@ -76,11 +78,19 @@ RENDER — ПОШАГОВО (для друзей, бесплатно)
 
 
 
-5) One-off Shell на Render: меню твоего Web Service → Shell, выполни:
+5) Фильмы в базе (сид)
 
-     python manage.py seed_mcu
+   - На бесплатном плане Shell на Render нет, поэтому в шаге 3 / render.yaml build уже сделан с
 
-   (загрузит фильмы; один раз, потом по желанию).
+     "&& python manage.py seed_mcu" — при деплое база заполняется сама.
+
+   - Вручную (Neon) с твоего ПК: в корне проекта создай файл neon_database_url.txt (одна строка —
+
+     тот же DATABASE_URL, что в Render), в .gitignore он есть. Потом в PowerShell из папки проекта:
+
+     .\seed-neon.ps1
+
+   - Платный Shell на Render, если появится:  python manage.py seed_mcu
 
 
 
